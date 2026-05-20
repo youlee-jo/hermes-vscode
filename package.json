@@ -2,7 +2,7 @@
   "name": "hermes-ai-agent",
   "displayName": "Hermes AI Agent",
   "description": "VS Code sidebar for the Hermes AI agent. Streams chat, runs tools, manages sessions. Multi-model (Claude, Codex). Communicates over ACP.",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "publisher": "joaompfp",
   "author": "joao",
   "license": "MIT",
@@ -66,18 +66,18 @@
     "viewsContainers": {
       "secondarySidebar": [
         {
-          "id": "hermes",
+          "id": "hermesSecondary",
           "title": "Hermes",
           "icon": "resources/hermes-icon.svg"
         }
       ]
     },
     "views": {
-      "hermes": [
+      "hermesSecondary": [
         {
           "type": "webview",
-          "id": "hermes.chatView",
-          "name": "Chat"
+          "id": "hermes.secondaryChatView",
+          "name": "Hermes"
         }
       ]
     },
