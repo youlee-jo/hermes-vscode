@@ -64,10 +64,10 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "hermes",
-          "title": "Hermes Agent",
+          "title": "Hermes",
           "icon": "resources/hermes-icon.svg"
         }
       ]
