@@ -1,6 +1,5 @@
 import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import { findHermesFile } from './hermesPaths';
 
 export interface ModelMenuItem {
   id: string;
@@ -18,14 +17,11 @@ interface HermesModelRecord {
   name?: string;
 }
 
-interface HermesModelCache {
-  anthropic?: {
-    models?: Record<string, HermesModelRecord>;
-  };
-  openai?: {
-    models?: Record<string, HermesModelRecord>;
-  };
+interface HermesProviderCache {
+  models?: Record<string, HermesModelRecord>;
 }
+
+type HermesModelCache = Record<string, HermesProviderCache | undefined>;
 
 const ANTHROPIC_MODEL_IDS = [
   'claude-opus-4-1-20250805',
@@ -37,6 +33,13 @@ const ANTHROPIC_MODEL_IDS = [
   'claude-sonnet-4-6',
   'claude-3-haiku-20240307',
   'claude-haiku-4-5-20251001',
+];
+
+const OPENAI_MODEL_IDS = [
+  'gpt-5.5',
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.2',
 ];
 
 const OPENAI_CODEX_MODEL_IDS = [
@@ -60,6 +63,7 @@ const FALLBACK_LABELS: Record<string, string> = {
   'claude-sonnet-4-6': 'Claude Sonnet 4.6',
   'claude-3-haiku-20240307': 'Claude 3 Haiku',
   'claude-haiku-4-5-20251001': 'Claude Haiku 4.5',
+  'gpt-5.5': 'GPT-5.5',
   'gpt-5.4-mini': 'GPT-5.4 mini',
   'gpt-5.4': 'GPT-5.4',
   'gpt-5.3-codex': 'GPT-5.3 Codex',
@@ -70,8 +74,16 @@ const FALLBACK_LABELS: Record<string, string> = {
   'gpt-5.3-codex-spark': 'GPT-5.3 Codex Spark',
 };
 
-function readCache(): HermesModelCache | null {
-  const cachePath = path.join(os.homedir(), '.hermes', 'models_dev_cache.json');
+const BUILT_IN_PROVIDERS = new Set(['anthropic', 'openai', 'openai-codex']);
+
+function readCache(
+  home?: string,
+  env?: NodeJS.ProcessEnv,
+  platform?: NodeJS.Platform,
+): HermesModelCache | null {
+  const cachePath = findHermesFile(['models_dev_cache.json'], home, env, platform);
+  if (!cachePath) return null;
+
   try {
     const raw = fs.readFileSync(cachePath, 'utf8');
     return JSON.parse(raw) as HermesModelCache;
@@ -103,13 +115,73 @@ function buildGroup(
   };
 }
 
-export function loadHermesModelGroups(): ModelMenuGroup[] {
-  const cache = readCache();
+function providerLabel(provider: string): string {
+  const knownLabels: Record<string, string> = {
+    openrouter: 'OpenRouter',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+  };
+  if (knownLabels[provider]) return knownLabels[provider];
+
+  return provider
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map(part => part[0].toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function buildProviderCacheGroups(cache: HermesModelCache | null): ModelMenuGroup[] {
+  if (!cache) return [];
+
+  return Object.entries(cache)
+    .filter(([provider, value]) => !BUILT_IN_PROVIDERS.has(provider) && value?.models)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([provider, value]) => ({
+      group: providerLabel(provider),
+      items: Object.entries(value?.models ?? {})
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, record]) => ({
+          id,
+          label: itemLabel(id, record),
+          command: `${provider}:${id}`,
+        })),
+    }))
+    .filter(group => group.items.length > 0);
+}
+
+function buildCustomGroup(customModels: readonly string[]): ModelMenuGroup | null {
+  const unique = [...new Set(customModels.map(model => model.trim()).filter(Boolean))];
+  if (unique.length === 0) return null;
+
+  return {
+    group: 'Custom',
+    items: unique.map(model => ({
+      id: model,
+      label: model,
+      command: model,
+    })),
+  };
+}
+
+export function loadHermesModelGroups(
+  customModels: readonly string[] = [],
+  home?: string,
+  env?: NodeJS.ProcessEnv,
+  platform?: NodeJS.Platform,
+): ModelMenuGroup[] {
+  const cache = readCache(home, env, platform);
   const anthropic = cache?.anthropic?.models;
   const openai = cache?.openai?.models;
 
-  return [
+  const groups = [
     buildGroup('Anthropic', 'anthropic', ANTHROPIC_MODEL_IDS, anthropic),
+    buildGroup('OpenAI', 'openai', OPENAI_MODEL_IDS, openai),
     buildGroup('OpenAI Codex', 'openai-codex', OPENAI_CODEX_MODEL_IDS, openai),
+    ...buildProviderCacheGroups(cache),
   ];
+
+  const customGroup = buildCustomGroup(customModels);
+  if (customGroup) groups.push(customGroup);
+
+  return groups;
 }

@@ -6,6 +6,7 @@ import { execFileSync } from 'child_process';
 import { AcpClient } from './acpClient';
 import { PermissionRequestHandler, SessionManager } from './sessionManager';
 import { ChatPanelProvider } from './chatPanel';
+import { findHermesFile } from './hermesPaths';
 
 const DEFAULT_SONNET_MODEL = 'claude-sonnet-4-6';
 const APPROVED_BINARIES_KEY = 'hermes.approvedBinaries';
@@ -43,7 +44,8 @@ function extractModelFromHermesConfig(content: string): string | null {
 
 function readHermesModel(): { model: string; source: 'env' | 'config' | 'fallback' } {
   try {
-    const configPath = path.join(os.homedir(), '.hermes', 'config.yaml');
+    const configPath = findHermesFile(['config.yaml']);
+    if (!configPath) return { model: DEFAULT_SONNET_MODEL, source: 'fallback' };
     const content = fs.readFileSync(configPath, 'utf8');
     const model = extractModelFromHermesConfig(content);
     if (model) {
@@ -96,6 +98,8 @@ function resolveHermesBinary(configuredPath: string): string {
     if (hermesPath === 'hermes') {
       const tryPaths = [
         path.join(os.homedir(), '.local', 'bin', 'hermes'),
+        path.join(os.homedir(), 'AppData', 'Local', 'hermes', 'bin', 'hermes.exe'),
+        path.join(os.homedir(), 'AppData', 'Local', 'hermes', 'hermes.exe'),
         '/usr/local/bin/hermes',
         '/usr/bin/hermes',
       ];
@@ -216,6 +220,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const hermesConfig = vscode.workspace.getConfiguration('hermes');
   const debugLogs = hermesConfig.get<boolean>('debugLogs', false);
+  const customModels = hermesConfig.get<string[]>('customModels', []);
 
   client = new AcpClient(
     hermesPath,
@@ -269,6 +274,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     hermesVersion,
     context,
     line => outputChannel.appendLine(line),
+    customModels,
   );
 
   context.subscriptions.push(

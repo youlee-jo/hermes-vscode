@@ -1,11 +1,11 @@
 /**
- * Loads Hermes skills from ~/.hermes/skills/ directory tree.
+ * Loads Hermes skills from the active Hermes skills directory tree.
  * Each skill is a directory with a SKILL.md file containing YAML frontmatter.
  */
 
 import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
+import { hermesPath } from './hermesPaths';
 
 export interface SkillEntry {
   name: string;
@@ -18,9 +18,9 @@ export interface SkillGroup {
   skills: SkillEntry[];
 }
 
-/** Scan ~/.hermes/skills/ and return grouped skills sorted alphabetically. */
+/** Scan the Hermes skills directory and return grouped skills sorted alphabetically. */
 export function loadHermesSkills(): SkillGroup[] {
-  const skillsDir = path.join(os.homedir(), '.hermes', 'skills');
+  const skillsDir = hermesPath(['skills']);
   if (!fs.existsSync(skillsDir)) return [];
 
   const groups: SkillGroup[] = [];

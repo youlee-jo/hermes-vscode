@@ -94,6 +94,14 @@
           "type": "boolean",
           "default": false,
           "description": "Enable diagnostic ACP logs in the Hermes output channel."
+        },
+        "hermes.customModels": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional model commands shown in the model picker, for example openrouter:openai/gpt-5.5 or my-provider:custom-model."
         }
       }
     }
@@ -102,7 +110,8 @@
     "vscode:prepublish": "npm run build",
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "test": "node scripts/run-tests.js"
   },
   "devDependencies": {
     "@types/dompurify": "^3.0.5",

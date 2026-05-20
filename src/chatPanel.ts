@@ -24,7 +24,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider {
   private lastTurnTools: StoredMessage[] = [];
 
   private readonly store: SessionStore;
-  private readonly modelGroups: ModelMenuGroup[] = loadHermesModelGroups();
+  private readonly modelGroups: ModelMenuGroup[];
   private readonly skillGroups: SkillGroup[] = loadHermesSkills();
 
   private selectedSkills: string[] = [];
@@ -39,7 +39,9 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider {
     private readonly hermesVersion: string = '',
     private readonly context: vscode.ExtensionContext,
     private readonly log: (line: string) => void = () => {},
+    customModels: readonly string[] = [],
   ) {
+    this.modelGroups = loadHermesModelGroups(customModels);
     this.mediaRoot = path.join(this.context.globalStorageUri.fsPath, 'media');
     fs.mkdirSync(this.mediaRoot, { recursive: true });
     this.store = new SessionStore(context);
